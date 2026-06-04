@@ -1,0 +1,136 @@
+
+<style>
+  .quiz-wrap { padding: 1.5rem 0; font-family: var(--font-sans); }
+  .header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.5rem; }
+  .score-box { display: flex; gap: 12px; }
+  .score-pill { font-size: 13px; padding: 4px 14px; border-radius: 20px; border: 0.5px solid var(--color-border-secondary); color: var(--color-text-secondary); background: var(--color-background-secondary); }
+  .score-pill span { font-weight: 500; color: var(--color-text-primary); }
+  .progress-bar { height: 4px; background: var(--color-background-secondary); border-radius: 4px; margin-bottom: 1.5rem; overflow: hidden; }
+  .progress-fill { height: 100%; background: #1D9E75; border-radius: 4px; transition: width 0.4s ease; }
+  .tense-badge { display: inline-block; font-size: 12px; font-weight: 500; padding: 3px 10px; border-radius: 20px; margin-bottom: 0.75rem; }
+  .t-present { background: #E6F1FB; color: #0C447C; }
+  .t-past { background: #EEEDFE; color: #3C3489; }
+  .t-future { background: #E1F5EE; color: #085041; }
+  .question-card { background: var(--color-background-primary); border: 0.5px solid var(--color-border-tertiary); border-radius: var(--border-radius-lg); padding: 1.25rem 1.5rem; margin-bottom: 1rem; }
+  .sentence { font-size: 18px; line-height: 2; color: var(--color-text-primary); margin-bottom: 1rem; }
+  .blank { display: inline-block; min-width: 160px; border-bottom: 2px solid var(--color-border-primary); padding: 0 8px; text-align: center; font-weight: 500; color: var(--color-text-primary); }
+  .options-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 0.5rem; }
+  .opt-btn { background: var(--color-background-primary); border: 0.5px solid var(--color-border-secondary); border-radius: var(--border-radius-md); padding: 10px 14px; font-size: 14px; cursor: pointer; text-align: left; color: var(--color-text-primary); transition: background 0.15s, border-color 0.15s; }
+  .opt-btn:hover:not(:disabled) { background: var(--color-background-secondary); border-color: var(--color-border-primary); }
+  .opt-btn.correct { background: #EAF3DE; border-color: #3B6D11; color: #27500A; }
+  .opt-btn.wrong { background: #FCEBEB; border-color: #A32D2D; color: #501313; }
+  .opt-btn.reveal { background: #EAF3DE; border-color: #3B6D11; color: #27500A; opacity: 0.7; }
+  .feedback { font-size: 13px; margin-top: 0.75rem; padding: 8px 12px; border-radius: var(--border-radius-md); }
+  .feedback.ok { background: #EAF3DE; color: #27500A; }
+  .feedback.no { background: #FCEBEB; color: #501313; }
+  .hint { font-size: 12px; color: var(--color-text-secondary); margin-top: 0.5rem; }
+  .next-btn { margin-top: 1rem; width: 100%; padding: 11px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-secondary); font-size: 15px; cursor: pointer; color: var(--color-text-primary); font-weight: 500; }
+  .next-btn:hover { background: var(--color-background-tertiary); }
+  .results { text-align: center; padding: 2rem 1rem; }
+  .big-score { font-size: 56px; font-weight: 500; margin: 0.5rem 0; }
+  .result-msg { font-size: 16px; color: var(--color-text-secondary); margin-bottom: 1.5rem; }
+  .restart-btn { padding: 10px 28px; border-radius: var(--border-radius-md); border: 0.5px solid var(--color-border-secondary); background: var(--color-background-primary); font-size: 15px; cursor: pointer; color: var(--color-text-primary); }
+  .restart-btn:hover { background: var(--color-background-secondary); }
+  .streak { font-size: 13px; color: #3B6D11; font-weight: 500; margin-left: 6px; }
+</style>
+
+<div class="quiz-wrap">
+  <h2 class="sr-only">Quiz de tiempos perfectos en inglés — fill in the blank</h2>
+  <div class="header">
+    <div style="font-size:15px; font-weight:500; color:var(--color-text-primary)">Perfect Tenses Quiz <span class="streak" id="streak"></span></div>
+    <div class="score-box">
+      <div class="score-pill">✓ <span id="correct-count">0</span></div>
+      <div class="score-pill">✗ <span id="wrong-count">0</span></div>
+    </div>
+  </div>
+  <div class="progress-bar"><div class="progress-fill" id="progress" style="width:0%"></div></div>
+  <div id="quiz-body"></div>
+</div>
+
+<script>
+const questions = [
+  { tense: "Present Perfect", badge: "t-present", sentence: "She ___ never ___ sushi before.", blank: "has ... tried", options: ["has ... tried", "had ... tried", "will have ... tried", "have ... tried"], hint: "Present perfect: have/has + past participle" },
+  { tense: "Past Perfect", badge: "t-past", sentence: "By the time we arrived, the movie ___.", blank: "had already started", options: ["has already started", "had already started", "will have started", "already started"], hint: "Past perfect: had + past participle" },
+  { tense: "Future Perfect", badge: "t-future", sentence: "By next year, they ___ the project.", blank: "will have finished", options: ["will finish", "have finished", "will have finished", "had finished"], hint: "Future perfect: will have + past participle" },
+  { tense: "Present Perfect", badge: "t-present", sentence: "I ___ just ___ my homework!", blank: "have ... finished", options: ["had ... finished", "have ... finished", "will have ... finished", "has ... finished"], hint: "Use 'have' with I / you / we / they" },
+  { tense: "Past Perfect", badge: "t-past", sentence: "He said he ___ the book three times.", blank: "had read", options: ["has read", "had read", "will have read", "reads"], hint: "Event completed before another past event → past perfect" },
+  { tense: "Future Perfect", badge: "t-future", sentence: "By 8 PM, she ___ for five hours.", blank: "will have been studying", options: ["will have studied", "will have been studying", "has been studying", "will be studying"], hint: "Emphasizes duration up to a future point → future perfect continuous" },
+  { tense: "Present Perfect", badge: "t-present", sentence: "They ___ in this city for ten years.", blank: "have lived", options: ["lived", "have lived", "had lived", "will have lived"], hint: "Action started in the past and still continues → present perfect" },
+  { tense: "Past Perfect", badge: "t-past", sentence: "We ___ our dinner before they called us.", blank: "had eaten", options: ["ate", "have eaten", "had eaten", "will have eaten"], hint: "Which action happened first?" },
+  { tense: "Future Perfect", badge: "t-future", sentence: "By Monday, I ___ the report.", blank: "will have submitted", options: ["submit", "will have submitted", "have submitted", "had submitted"], hint: "Action completed before a future time" },
+  { tense: "Present Perfect", badge: "t-present", sentence: "___ you ever ___ to Japan?", blank: "Have ... been", options: ["Had ... been", "Have ... been", "Will ... have been", "Did ... go"], hint: "Life experience question → present perfect" },
+];
+
+let current = 0, correct = 0, wrong = 0, streak = 0, answered = false;
+const shuffled = [...questions].sort(() => Math.random() - 0.5);
+
+function render() {
+  const body = document.getElementById('quiz-body');
+  if (current >= shuffled.length) { showResults(); return; }
+  const q = shuffled[current];
+  const pct = (current / shuffled.length) * 100;
+  document.getElementById('progress').style.width = pct + '%';
+
+  const opts = [...q.options].sort(() => Math.random() - 0.5);
+  body.innerHTML = `
+    <div class="question-card">
+      <span class="tense-badge ${q.badge}">${q.tense}</span>
+      <div class="sentence">${q.sentence.replace('___', `<span class="blank" id="blank-display">___</span>`)}</div>
+      <div class="options-grid" id="opts">
+        ${opts.map(o => `<button class="opt-btn" onclick="answer('${o.replace(/'/g,"\\'")}', this)">${o}</button>`).join('')}
+      </div>
+      <div class="hint">💡 ${q.hint}</div>
+      <div id="feedback"></div>
+    </div>
+    <button class="next-btn" id="next-btn" style="display:none" onclick="nextQ()">${current < shuffled.length - 1 ? 'Siguiente pregunta →' : 'Ver resultados →'}</button>
+  `;
+  answered = false;
+}
+
+function answer(chosen, btn) {
+  if (answered) return;
+  answered = true;
+  const q = shuffled[current];
+  const isCorrect = chosen === q.blank;
+  const allBtns = document.querySelectorAll('.opt-btn');
+  allBtns.forEach(b => {
+    b.disabled = true;
+    if (b.textContent.trim() === q.blank && b !== btn) b.classList.add('reveal');
+  });
+  if (isCorrect) {
+    btn.classList.add('correct');
+    correct++; streak++;
+    document.getElementById('correct-count').textContent = correct;
+    document.getElementById('feedback').innerHTML = `<div class="feedback ok">✓ ¡Correcto! <strong>${q.blank}</strong></div>`;
+  } else {
+    btn.classList.add('wrong');
+    wrong++; streak = 0;
+    document.getElementById('wrong-count').textContent = wrong;
+    document.getElementById('feedback').innerHTML = `<div class="feedback no">✗ La respuesta correcta es: <strong>${q.blank}</strong></div>`;
+  }
+  document.getElementById('blank-display').textContent = q.blank;
+  document.getElementById('next-btn').style.display = 'block';
+  const s = document.getElementById('streak');
+  s.textContent = streak >= 3 ? `🔥 ${streak} seguidas` : '';
+}
+
+function nextQ() { current++; render(); }
+
+function showResults() {
+  document.getElementById('progress').style.width = '100%';
+  const pct = Math.round((correct / shuffled.length) * 100);
+  let msg = pct >= 90 ? "¡Excelente! Dominas los perfect tenses 🎉" : pct >= 70 ? "¡Muy bien! Solo unos detalles más 💪" : pct >= 50 ? "Buen intento, sigue practicando 📚" : "Repasa los perfect tenses e inténtalo de nuevo 🔄";
+  document.getElementById('quiz-body').innerHTML = `
+    <div class="results">
+      <div style="font-size:15px; color:var(--color-text-secondary)">Resultado final</div>
+      <div class="big-score">${correct}/${shuffled.length}</div>
+      <div class="result-msg">${msg}<br><span style="font-size:14px">${correct} correctas · ${wrong} incorrectas</span></div>
+      <button class="restart-btn" onclick="restart()"><i class="ti ti-refresh" aria-hidden="true"></i> Jugar de nuevo</button>
+    </div>
+  `;
+}
+
+function restart() { current = 0; correct = 0; wrong = 0; streak = 0; shuffled.sort(() => Math.random() - 0.5); document.getElementById('correct-count').textContent = 0; document.getElementById('wrong-count').textContent = 0; render(); }
+
+render();
+</script>
